@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file is the entry point for Claude Code working in this repo. Read it first. Read `HANDOFF.md` next for current-sprint context. Then `README.md` for the public framing.
+This file is the entry point for Claude Code working in this repo. Read it first. Then `README.md` for what the project is and how to deploy it, and `ARCHITECTURE.md` for the design decisions you'll need to respect.
 
 ## What this is
 
@@ -76,6 +76,38 @@ KV namespace `STRAVA_TOKENS` must exist (see SETUP.md step 3).
 - Generate calendar events directly from the MCP (that's the agent's job)
 - Ship a code change that breaks an existing test
 - Resolve a failure mode without adding an entry to `FAILURE_MODES.md`
+- Change the visibility of any GitHub repo (private ↔ public). Visibility is the user's call; you ask, you don't decide.
+- Disclose secrets or PII because you judged the risk "marginal." The user's standard is theirs to set, not yours.
+
+## Two-remote git discipline (PII guard)
+
+This project has **two remotes** with very different rules:
+
+- `origin` → `David-Eques/running-coach-personal` (private) — has the athlete's filled `agent/plan.md`, real KV id, accumulated `agent/history/*.md`. Safe to push freely.
+- `template` → `David-Eques/running-coach` (public) — must only contain the sanitized template. Filled plan, history files, real KV id are PII and must NEVER land here.
+
+Mixing the two has already caused one incident (a `git push template main` pushed local main which had personal commits, briefly exposing PII; force-pushed a cherry-picked clean state to recover). To prevent a repeat, follow this protocol **every time** you push to `template/*`:
+
+1. **Show the user the commit list that would land**, before any push:
+   ```bash
+   git fetch template
+   git log template/main..HEAD --oneline
+   ```
+   Read every commit subject. If any commit subject contains "personal", touches `agent/plan.md` content, `agent/history/`, the real KV id, or anything PII-shaped — **stop**. Cherry-pick only the safe commits onto a clean base branched from `template/main`.
+
+2. **Never push local `main` directly to `template/main`** if local `main` has commits beyond what `template/main` has. Always cherry-pick onto a temp branch built from `template/main`:
+   ```bash
+   git checkout -b template-fix template/main
+   git cherry-pick <safe-sha>
+   git push --force-with-lease=main:<expected-template-main-sha> template template-fix:main
+   git checkout main && git branch -D template-fix
+   ```
+
+3. **Never use bare `--force`** on a public remote. Always `--force-with-lease=<branch>:<expected-sha>` so a race condition can't silently overwrite something you haven't seen.
+
+4. **Never flip repo visibility without explicit user authorization** — this includes "back to public after I've cleaned up." Wait for the green light.
+
+If any of these feel like friction in the moment, that's the point: the friction is cheaper than the leak.
 
 ## When in doubt
 

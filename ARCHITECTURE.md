@@ -32,23 +32,25 @@ This MCP exposes verbs at the level of the agent's intent:
 
 ### `get_recent_training(days)`
 
-Returns a normalized list. Each activity:
+Returns a normalized list. Each activity (see `StravaActivity` in `src/strava.ts`):
 
 ```ts
 {
-  date: "2026-05-08",
-  type: "Run",
+  id: 12345678901,
+  type: "Run",                // "Run" | "TrailRun" | "VirtualRun"
+  start_date: "2026-05-08T14:23:00Z",
   distance_km: 8.2,
   duration_min: 42.3,
   avg_pace_per_km: "5:09",
-  avg_hr: 152,
-  max_hr: 168,
+  avg_hr: 152,                // null when no HR recorded
+  max_hr: 168,                // null when no HR recorded
+  total_elevation_gain_m: 47,
   // Coaching-relevant derivatives:
-  intensity_factor: 0.84,    // avg_hr relative to LTHR
-  hr_drift_pct: null,        // 2nd half vs 1st half HR — needs the streams API; v0.2
-  is_long_run: false,
-  est_trimp: 67,             // Banister TRIMP
-  trimp_is_estimated: false  // true when HR was missing and TRIMP fell back to an RPE estimate
+  intensity_factor: 0.90,     // avg_hr relative to LTHR; null when no HR
+  hr_drift_pct: null,         // 2nd half vs 1st half HR — needs the streams API; not in v0.1
+  est_trimp: 67,              // Banister TRIMP (HR-based) or RPE-estimated fallback
+  trimp_is_estimated: false,  // true when HR was missing and TRIMP fell back to RPE
+  is_long_run: false          // distance_km >= 12
 }
 ```
 
@@ -56,26 +58,40 @@ Not present: GPS polylines, segment efforts, kudos count. The agent doesn't need
 
 ### `analyze_training_load(weeks=4)`
 
-Returns:
+Returns (see `LoadAnalysis` in `src/analyze.ts`):
 
 ```ts
 {
-  acute_load_7d: 421,           // sum TRIMP last 7 days
-  chronic_load_28d: 1654,       // sum TRIMP last 28 days
-  acwr: 1.06,                   // acute / (chronic/4) — sweet spot ~0.8-1.3
-  acwr_status: "optimal",       // {undertraining, optimal, threshold, danger}
-  weekly_loads: [380, 410, 440, 421],
-  trend: "stable_progressive",
-  monotony: 1.8,                // weekly mean / SD (Foster) — high = uniform = risky
-  strain: 757,                  // monotony × weekly load
+  acute_load_7d: 421,          // sum TRIMP last 7 days
+  chronic_load_28d: 1654,      // sum TRIMP last 28 days
+  acwr: 1.06,                  // acute / (chronic/4) — optimal ~0.8-1.3
+  acwr_status: "optimal",      // "undertraining" | "optimal" | "threshold" | "danger"
+  weekly_loads: [380, 410, 440, 421],   // [oldest, ..., current]
+  trend: "stable_progressive", // "declining" | "stable" | "stable_progressive" | "spiking"
+  monotony: 1.8,               // Foster's monotony: mean / SD of daily loads
+  strain: 757,                 // monotony × acute_load_7d
   flags: [
-    // e.g. "elevated_hr_drift_3_of_last_4_runs",
-    // "missed_long_run_2_consecutive_weeks"
-  ]
+    // Currently emitted (see computeFlags in analyze.ts):
+    //   "volume_dropped_by_more_than_half_vs_prev_week"
+    //   "three_consecutive_weeks_no_training"
+    // HR-drift / resting-HR flags are out of scope until the streams API lands.
+  ],
+  data_quality: {
+    activities_analyzed: 18,
+    activities_with_hr: 16,
+    coverage_pct: 89
+  }
 }
 ```
 
-Decision: I'm using Banister TRIMP because HR data is in every Strava run. Could swap for TSS if power becomes available. ACWR thresholds are from Gabbett's work — debated in the literature but actionable. Monotony from Foster. These choices are versioned in `src/analyze.ts` so future-me can challenge past-me.
+Decisions baked in:
+
+- **Banister TRIMP** because HR is in every recent-ish Strava run that was recorded with a strap. Could swap for TSS if power becomes available.
+- **ACWR thresholds** from Gabbett's work (`< 0.8` undertraining, `≤ 1.3` optimal, `≤ 1.5` threshold, `> 1.5` danger). Debated in the literature but actionable.
+- **Monotony** from Foster (1998), neutralized to 1.0 on zero-variance weeks — see [FAILURE_MODES.md](./FAILURE_MODES.md) for the rationale and tradeoff.
+- **Half-open `(lower, upper]` windows everywhere** so the four weekly buckets partition the 28-day window exactly — `sum(weekly_loads) == chronic_load_28d` always. Again, [FAILURE_MODES.md](./FAILURE_MODES.md) has the bug-report shape.
+
+All of these live in `src/analyze.ts` with citations in the file header, so the next person to touch them can argue with the current values.
 
 ### `suggest_next_workout(plan_phase, target_workout, day_of_week?)`
 
