@@ -1,0 +1,20 @@
+node_modules/
+.claude/settings.local.json
+.wrangler/
+.dev.vars
+.env
+.env.local
+*.log
+.DS_Store
+.vscode/
+.idea/
+dist/
+build/
+coverage/
+# ATG / KOT program PDF — paid product, do not redistribute. Local reference only.
+ATG.pdf
+# Per-user training history files. Each fork's cloud agent writes these as it
+# runs each week; they're personal data and shouldn't ship in the public
+# template. The README.md inside agent/history/ stays tracked as scaffolding.
+agent/history/*.md
+!agent/history/README.md

@@ -1,0 +1,24 @@
+name = "running-coach"
+main = "src/index.ts"
+compatibility_date = "2025-05-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Non-secret config. ATHLETE_LTHR is the athlete's lactate-threshold HR; it drives
+# the Banister TRIMP estimate in src/strava.ts. Keep it in sync with agent/plan.md.
+# Unset / implausible values fall back to 170 (see resolveAthleteLTHR in src/index.ts).
+[vars]
+ATHLETE_LTHR = "169"
+
+# KV stores the Strava refresh token so the worker can mint access tokens on demand.
+# The "Deploy to Cloudflare" button auto-creates this namespace and substitutes the
+# id at deploy time. If you're deploying manually:
+#   wrangler kv namespace create STRAVA_TOKENS
+# Then paste the returned id below in place of REPLACE_WITH_KV_ID.
+[[kv_namespaces]]
+binding = "STRAVA_TOKENS"
+id = "REPLACE_WITH_KV_ID"
+
+# Secrets (set via `wrangler secret put <NAME>`):
+# - STRAVA_CLIENT_ID
+# - STRAVA_CLIENT_SECRET
+# - MCP_BEARER_TOKEN  (random token you generate; paste into Claude Code MCP config)

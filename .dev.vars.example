@@ -1,0 +1,20 @@
+# Worker secrets — read by `wrangler dev` (when copied to `.dev.vars`) AND by
+# the "Deploy to Cloudflare" button (the deploy UI reads this file to know
+# which secrets to prompt the user for, with the comments shown as hints).
+#
+# To run locally: cp .dev.vars.example .dev.vars and fill in the values, then
+# `npm run dev`.
+# To deploy: the Deploy to Cloudflare button prompts for these at deploy time;
+# or set them manually with `wrangler secret put NAME`.
+
+# Strava API app credentials. Create an app at https://www.strava.com/settings/api
+# and paste the Client ID and Client Secret here. The Authorization Callback Domain
+# in your Strava app must match the host of your deployed Worker (e.g.
+# `running-coach.your-subdomain.workers.dev`).
+STRAVA_CLIENT_ID=
+STRAVA_CLIENT_SECRET=
+
+# Shared secret between Claude Code and the Worker. Pick anything random and
+# strong — `openssl rand -hex 32` generates a good one. You'll paste the same
+# value when wiring the MCP into Claude Code.
+MCP_BEARER_TOKEN=

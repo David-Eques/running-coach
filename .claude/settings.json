@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__claude_ai_Google_Calendar__update_event",
+      "Bash(gh repo *)"
+    ]
+  }
+}

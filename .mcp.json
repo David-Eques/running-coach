@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "running-coach": {
+      "type": "http",
+      "url": "${RUNNING_COACH_URL}",
+      "headers": {
+        "Authorization": "Bearer ${RUNNING_COACH_BEARER}"
+      }
+    }
+  }
+}

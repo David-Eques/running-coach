@@ -1,0 +1,12 @@
+{
+  "name": "running-coach",
+  "description": "Adaptive weekly run planner. Reads your Strava via the running-coach MCP, applies a deterministic load model, and writes next week's workouts to your Google Calendar. Requires a deployed running-coach Cloudflare Worker (see README for one-click deploy).",
+  "version": "0.1.0",
+  "author": {
+    "name": "David Lynn",
+    "url": "https://github.com/David-Eques"
+  },
+  "homepage": "https://github.com/David-Eques/running-coach",
+  "repository": "https://github.com/David-Eques/running-coach",
+  "license": "MIT"
+}

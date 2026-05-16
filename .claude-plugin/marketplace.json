@@ -1,0 +1,22 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "running-coach",
+  "description": "Single-plugin marketplace for the running-coach agent. Install with `/plugin marketplace add David-Eques/running-coach` then `/plugin install running-coach@running-coach`.",
+  "owner": {
+    "name": "David Lynn",
+    "url": "https://github.com/David-Eques"
+  },
+  "plugins": [
+    {
+      "name": "running-coach",
+      "description": "Adaptive weekly run planner backed by a Cloudflare Worker MCP that wraps Strava. Reads agent/plan.md, calls the running-coach MCP for load math, and emits next week's workouts as Google Calendar events.",
+      "category": "productivity",
+      "source": "./",
+      "homepage": "https://github.com/David-Eques/running-coach",
+      "author": {
+        "name": "David Lynn",
+        "url": "https://github.com/David-Eques"
+      }
+    }
+  ]
+}
