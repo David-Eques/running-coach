@@ -185,9 +185,21 @@ app.get('/bootstrap', async (c) => {
 // MCP ENDPOINT (bearer-gated)
 // ---------------------------------------------------------------------------
 
+// Auth gate. Accepts the token via either:
+//   - Authorization: Bearer <token>   (preferred — header, doesn't appear in URL logs)
+//   - ?token=<token>                  (fallback — the claude.ai "custom connector"
+//                                       UI accepts only a URL, no headers, so the
+//                                       token has to ride in the URL. Less ideal:
+//                                       URLs land in more places (browser history,
+//                                       reverse-proxy logs, error pages) than
+//                                       headers do. Prefer the header in CLI usage.)
 app.use('/mcp/*', async (c, next) => {
   const auth = c.req.header('authorization')
-  if (auth !== `Bearer ${c.env.MCP_BEARER_TOKEN}`) {
+  const tokenParam = c.req.query('token')
+  const expected = c.env.MCP_BEARER_TOKEN
+  const headerOk = auth === `Bearer ${expected}`
+  const queryOk = tokenParam !== undefined && tokenParam === expected
+  if (!headerOk && !queryOk) {
     return c.json({ error: 'unauthorized' }, 401)
   }
   await next()
