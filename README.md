@@ -1,58 +1,16 @@
 # running-coach
 
-An AI running coach that lives in your Google Calendar. Reads your Strava, computes training load deterministically, and writes next week's workouts as a weekly Claude Code task. Built as a reference implementation for **coaching-shaped MCP tools** — exposing domain primitives to an LLM agent instead of mirroring a vendor REST API.
+An AI running coach that lives in your Google Calendar. It reads your Strava, computes training load **deterministically in versioned code**, and writes next week's workouts as a weekly Claude Code task. Built as a reference implementation for **coaching-shaped MCP tools** — exposing domain primitives (`analyze_training_load`, `suggest_next_workout`) to an LLM agent instead of mirroring a vendor REST API.
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/David-Eques/running-coach)
 
-## Deploy in 3 steps
+**Read the design:** [Architecture](./ARCHITECTURE.md) · [Prompt design](./PROMPT_DESIGN.md) · [Failure modes](./FAILURE_MODES.md)
 
-You need: a Strava account, a Cloudflare account (free tier), a Google account, and a Claude account.
+## Demo
 
-### 1. Create a Strava API app
+![running-coach: the MCP returning coaching-shaped training-load analytics](docs/demo.gif)
 
-Go to **https://www.strava.com/settings/api** and create an application:
-
-| Field | Value |
-|---|---|
-| Application Name | `running-coach` (or anything) |
-| Category | Training |
-| Website | `http://localhost` (just a placeholder) |
-| Authorization Callback Domain | leave as `localhost` for now — you'll update after step 2 |
-
-Copy the **Client ID** and **Client Secret**.
-
-### 2. Click "Deploy to Cloudflare"
-
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/David-Eques/running-coach)
-
-Cloudflare's UI will:
-- Fork this repo into your GitHub
-- Provision the Worker + KV namespace
-- Prompt you for three secrets (paste the values you copied from Strava, plus invent a random one for `MCP_BEARER_TOKEN` — `openssl rand -hex 32` is a good way)
-- Deploy to `https://running-coach.<your-subdomain>.workers.dev`
-
-Then:
-
-1. **Go back to your Strava app** at https://www.strava.com/settings/api and update **Authorization Callback Domain** to the host of your new Worker URL (e.g. `running-coach.your-subdomain.workers.dev`). Save.
-2. **Visit your Worker URL** in a browser — you'll see a "Connect Strava" button. Click it, authorize, done. The Worker now has your Strava refresh token in KV and can read your activities.
-
-### 3. Add the MCP to Claude Code
-
-From the success page after connecting Strava, copy the `claude mcp add` command shown. Paste it in your terminal:
-
-```bash
-claude mcp add running-coach https://running-coach.<your-subdomain>.workers.dev/mcp \
-  --transport http \
-  --header "Authorization: Bearer <YOUR_MCP_BEARER_TOKEN>"
-```
-
-Open Claude Code in any project — `/mcp` shows the running-coach server with three tools. Ask: *"Use running-coach to summarize my last 4 weeks of training."* You should see a real summary, anchored in real numbers.
-
-**Schedule the weekly run.** Go to **https://claude.ai/code/scheduled**, connect this project's repo, create a weekly scheduled task with `agent/prompt.md` as the prompt, Sunday 8 PM your timezone. Add the Google Calendar connector. The agent now runs itself every Sunday and writes next week's workouts to your calendar.
-
-First-time setup tip: open Claude Code with this repo as workspace and say *"Run a first-time setup — fill in agent/plan.md from these answers:..."* with your race, target, easy pace, max HR, weekly mileage, KOT days, and any injuries. The prompt's first-run branch handles the rest.
-
----
+The MCP doesn't return Strava JSON — it returns a coach's read of your week: ACWR and its status zone, weekly load trend, monotony/strain, and a deload/progress/skip recommendation with a rationale. The numbers are computed in [`src/analyze.ts`](./src/analyze.ts), not guessed by the model.
 
 ## Why this exists
 
@@ -106,6 +64,54 @@ The agent could absolutely just `fetch()` Strava itself. The reason to add an MC
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for the design thinking, [PROMPT_DESIGN.md](./PROMPT_DESIGN.md) for how the agent uses these tools, and [FAILURE_MODES.md](./FAILURE_MODES.md) for what's broken and what I'm watching.
 
+## Deploy your own
+
+It's single-tenant by design — one athlete per deployment. You run your own copy. You need: a Strava account, a Cloudflare account (free tier), a Google account, and a Claude account.
+
+### 1. Create a Strava API app
+
+Go to **https://www.strava.com/settings/api** and create an application:
+
+| Field | Value |
+|---|---|
+| Application Name | `running-coach` (or anything) |
+| Category | Training |
+| Website | `http://localhost` (just a placeholder) |
+| Authorization Callback Domain | leave as `localhost` for now — you'll update after step 2 |
+
+Copy the **Client ID** and **Client Secret**.
+
+### 2. Click "Deploy to Cloudflare"
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/David-Eques/running-coach)
+
+Cloudflare's UI will:
+- Fork this repo into your GitHub
+- Provision the Worker + KV namespace
+- Prompt you for three secrets (paste the values you copied from Strava, plus invent a random one for `MCP_BEARER_TOKEN` — `openssl rand -hex 32` is a good way)
+- Deploy to `https://running-coach.<your-subdomain>.workers.dev`
+
+Then:
+
+1. **Go back to your Strava app** at https://www.strava.com/settings/api and update **Authorization Callback Domain** to the host of your new Worker URL (e.g. `running-coach.your-subdomain.workers.dev`). Save.
+2. **Visit your Worker URL** in a browser — you'll see a "Connect Strava" button. Click it, authorize, done. The Worker now has your Strava refresh token in KV and can read your activities.
+
+### 3. Add the MCP to Claude Code
+
+From the success page after connecting Strava, copy the `claude mcp add` command shown. Paste it in your terminal:
+
+```bash
+claude mcp add running-coach https://running-coach.<your-subdomain>.workers.dev/mcp \
+  --transport http \
+  --header "Authorization: Bearer <YOUR_MCP_BEARER_TOKEN>"
+```
+
+Open Claude Code in any project — `/mcp` shows the running-coach server with three tools. Ask: *"Use running-coach to summarize my last 4 weeks of training."* You should see a real summary, anchored in real numbers.
+
+**Schedule the weekly run.** Go to **https://claude.ai/code/scheduled**, connect this project's repo, create a weekly scheduled task with `agent/prompt.md` as the prompt, Sunday 8 PM your timezone. Add the Google Calendar connector. The agent now runs itself every Sunday and writes next week's workouts to your calendar.
+
+First-time setup tip: open Claude Code with this repo as workspace and say *"Run a first-time setup — fill in agent/plan.md from these answers:..."* with your race, target, easy pace, max HR, weekly mileage, KOT days, and any injuries. The prompt's first-run branch handles the rest.
+
 ## Develop locally
 
 ```bash
@@ -121,7 +127,7 @@ See [SETUP.md](./SETUP.md) for the manual deploy walkthrough (the CLI path the D
 
 ## Status
 
-v0.1 — deployed, three tools live, first week's calendar generated. Scheduled weekly run in flight.
+v0.1, public. The Worker is deployed and serving real Strava data through all three tools; the first week's calendar was generated and the weekly scheduled run is in flight. Single-tenant by design — fork it to run your own. This is a reference for the *pattern* (coaching-shaped tools, load math in code), not a hosted product.
 
 ## License
 
