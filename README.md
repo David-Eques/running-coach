@@ -8,9 +8,18 @@ An AI running coach that lives in your Google Calendar. It reads your Strava, co
 
 ## Demo
 
+▶ **[Watch the 2-minute walkthrough](#)** — the Sunday task reads your week from Strava, decides next week against your plan, and writes the workouts to Google Calendar. <!-- replace (#) with your Loom share URL -->
+
+<details>
+<summary><b>Under the hood</b> — the MCP returns a coach's read, not Strava JSON</summary>
+
+<br>
+
 ![running-coach: the MCP returning coaching-shaped training-load analytics](docs/demo.gif)
 
-The MCP doesn't return Strava JSON — it returns a coach's read of your week: ACWR and its status zone, weekly load trend, monotony/strain, and a deload/progress/skip recommendation with a rationale. The numbers are computed in [`src/analyze.ts`](./src/analyze.ts), not guessed by the model.
+ACWR and its status zone, weekly load trend, monotony/strain, and a deload/progress/skip recommendation with a rationale — all computed in [`src/analyze.ts`](./src/analyze.ts), not guessed by the model.
+
+</details>
 
 ## Why this exists
 
