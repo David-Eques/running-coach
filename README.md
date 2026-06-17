@@ -4,7 +4,7 @@ An AI running coach that lives in your Google Calendar. It reads your Strava, co
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/David-Eques/running-coach)
 
-**Read the design:** [Architecture](./ARCHITECTURE.md) · [Prompt design](./PROMPT_DESIGN.md) · [Failure modes](./FAILURE_MODES.md)
+**Read the design:** [Architecture](./ARCHITECTURE.md) · [Prompt design](./PROMPT_DESIGN.md)
 
 ## Demo
 
@@ -62,7 +62,7 @@ The agent could absolutely just `fetch()` Strava itself. The reason to add an MC
 | `analyze_training_load(weeks)` | ACWR, weekly TRIMP, monotony, strain, overreaching risk flags | Load math has correct answers. Putting it in code makes it testable and consistent. |
 | `suggest_next_workout(plan_phase, target)` | Adjusted workout suggestion with rationale | Encapsulates the deload/progress decision rules so they're versioned, not buried in a prompt |
 
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for the design thinking, [PROMPT_DESIGN.md](./PROMPT_DESIGN.md) for how the agent uses these tools, and [FAILURE_MODES.md](./FAILURE_MODES.md) for what's broken and what I'm watching.
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for the design thinking and [PROMPT_DESIGN.md](./PROMPT_DESIGN.md) for how the agent uses these tools.
 
 ## Deploy your own
 
@@ -106,7 +106,7 @@ claude mcp add running-coach https://running-coach.<your-subdomain>.workers.dev/
   --header "Authorization: Bearer <YOUR_MCP_BEARER_TOKEN>"
 ```
 
-Open Claude Code in any project — `/mcp` shows the running-coach server with three tools. Ask: *"Use running-coach to summarize my last 4 weeks of training."* You should see a real summary, anchored in real numbers.
+Open Claude Code in any project — `/mcp` shows the running-coach server with three tools. Ask: *"Use running-coach to summarize my last 4 weeks of training."* You should see a summary anchored in the computed numbers.
 
 **Schedule the weekly run.** Go to **https://claude.ai/code/scheduled**, connect this project's repo, create a weekly scheduled task with `agent/prompt.md` as the prompt, Sunday 8 PM your timezone. Add the Google Calendar connector. The agent now runs itself every Sunday and writes next week's workouts to your calendar.
 

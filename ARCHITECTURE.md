@@ -8,7 +8,7 @@ Build a weekly automated run-planning loop that adapts to actual training respon
 
 LLMs are good at judgment calls and bad at consistent arithmetic. Load models are the opposite. The architecture choice that drives most of what follows: **put the load math in code, behind tools; let the LLM decide what to do with the answers**.
 
-If you only remember one thing: a tool named `analyze_training_load` forces a load model to exist. A prompt that says "consider training load" doesn't.
+A tool named `analyze_training_load` forces a load model to exist. A prompt that says "consider training load" doesn't.
 
 ## Why MCP
 
@@ -22,7 +22,7 @@ MCP gives:
 
 1. **A typed tool surface that names what matters.** When the surface is `get_activities`, the LLM thinks like a Strava API client. When it's `analyze_training_load`, the LLM thinks like a coach.
 2. **Multi-client reuse.** Cloud scheduled task uses it weekly. Desktop client uses it for "explain last week." A future iOS Shortcut could use it too. The compute happens once.
-3. **A natural seam for testing.** I can unit-test `computeACWR()` without an LLM in the loop.
+3. **A seam for testing.** `computeACWR()` can be unit-tested without an LLM in the loop.
 
 ## Tool design philosophy: coaching-shaped, not API-shaped
 
@@ -88,10 +88,10 @@ Decisions baked in:
 
 - **Banister TRIMP** because HR is in every recent-ish Strava run that was recorded with a strap. Could swap for TSS if power becomes available.
 - **ACWR thresholds** from Gabbett's work (`< 0.8` undertraining, `≤ 1.3` optimal, `≤ 1.5` threshold, `> 1.5` danger). Debated in the literature but actionable.
-- **Monotony** from Foster (1998), neutralized to 1.0 on zero-variance weeks — see [FAILURE_MODES.md](./FAILURE_MODES.md) for the rationale and tradeoff.
-- **Half-open `(lower, upper]` windows everywhere** so the four weekly buckets partition the 28-day window exactly — `sum(weekly_loads) == chronic_load_28d` always. Again, [FAILURE_MODES.md](./FAILURE_MODES.md) has the bug-report shape.
+- **Monotony** from Foster (1998), neutralized to 1.0 on zero-variance weeks.
+- **Half-open `(lower, upper]` windows everywhere** so the four weekly buckets partition the 28-day window exactly — `sum(weekly_loads) == chronic_load_28d` always.
 
-All of these live in `src/analyze.ts` with citations in the file header, so the next person to touch them can argue with the current values.
+All of these live in `src/analyze.ts` with citations in the file header, so the current values can be revisited against their sources.
 
 ### `suggest_next_workout(plan_phase, target_workout, day_of_week?)`
 
@@ -110,7 +110,7 @@ The actual deload/progress *thresholds* live in code (in `src/analyze.ts`). The 
 
 ## Tech stack
 
-- **Runtime:** Cloudflare Workers. Free tier covers this workload by ~3 orders of magnitude. Cold starts ~5ms. Edge locations don't matter here but the developer experience does.
+- **Runtime:** Cloudflare Workers. Free tier covers this workload comfortably. Cold starts ~5ms. Edge locations don't matter here; the developer experience does.
 - **Framework:** Hono. Minimal router that plays well with the MCP SDK.
 - **Protocol:** MCP Streamable HTTP from `@modelcontextprotocol/sdk` (pinned to `1.29.0`). Specifically the *Web Standards* transport (`WebStandardStreamableHTTPServerTransport`) — it speaks Fetch `Request`/`Response`, which is what a Worker hands you; the Node-HTTP transport (`StreamableHTTPServerTransport`) wants `IncomingMessage`/`ServerResponse` and doesn't fit. Stateless mode (a fresh `McpServer` + transport per request) — there's no per-session state to keep, and keeping any would mean a Durable Object, which this doesn't need.
 - **Storage:** Workers KV for the Strava refresh token. Single user, single record — KV is overkill but cheaper than running a database for one row.
@@ -146,7 +146,7 @@ In order of likely value:
 3. **Race-day prediction.** Given current load trajectory, predict goal-pace feasibility for the target race. Useful for "should I adjust the goal time."
 4. **Multi-user OAuth.** If the writeup gets attention and people ask for a hosted version.
 
-## What an enterprise version would look like (for thinking about it like an FDE)
+## What an enterprise version would look like
 
 Different problem, different shape. An enterprise coaching agent (think team / coach platform) would:
 

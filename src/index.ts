@@ -208,10 +208,9 @@ app.use('/mcp/*', async (c, next) => {
 // The MCP Streamable HTTP transport defines a GET on the endpoint as the
 // server→client SSE channel for server-initiated messages. In stateless mode
 // each request gets a fresh transport with no way to push, so that stream
-// would sit open forever and Workers would kill it with "code had hung"
-// (~17k such errors observed before this gate was added; see FAILURE_MODES.md).
-// We don't use server-initiated messages, so reject anything other than POST
-// with 405 per the MCP spec.
+// would sit open forever and Workers would kill it with "code had hung",
+// and the client would reconnect in a loop. We don't use server-initiated
+// messages, so reject anything other than POST with 405 per the MCP spec.
 app.all('/mcp', async (c) => {
   if (c.req.method !== 'POST') {
     return c.body(null, 405, { Allow: 'POST' })

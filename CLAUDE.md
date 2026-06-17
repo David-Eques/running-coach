@@ -16,7 +16,7 @@ These decisions are load-bearing for the project's value as a reference. Don't r
 2. **Load math lives in `src/analyze.ts`, not in prompts.** ACWR, TRIMP, monotony, decision thresholds — all in versioned code. The LLM applies the rules; it does not invent them.
 3. **Single user, single tenant.** Auth is a static bearer token. Do not introduce multi-tenancy, per-user OAuth, or a database. If multi-tenant becomes the goal, that's a separate project.
 4. **Reads only.** This system never writes to Strava. Calendar writes happen through Google Calendar connector at the agent layer, never through the MCP.
-5. **The four writeups are first-class artifacts.** `ARCHITECTURE.md`, `PROMPT_DESIGN.md`, `FAILURE_MODES.md`, and `README.md` are the FDE signal. Code changes that affect any of them should include the doc update in the same change.
+5. **The three writeups are first-class artifacts.** `ARCHITECTURE.md`, `PROMPT_DESIGN.md`, and `README.md` are the FDE signal. Code changes that affect any of them should include the doc update in the same change.
 
 ## File ownership
 
@@ -27,7 +27,6 @@ These decisions are load-bearing for the project's value as a reference. Don't r
 | `agent/prompt.md` | Shared, careful | Updates must be reflected in `PROMPT_DESIGN.md` iteration log. |
 | `src/analyze.ts` | Shared, careful | Threshold/formula changes need a citation in the references block. |
 | `ARCHITECTURE.md` | Shared | Update when you make a structural decision. |
-| `FAILURE_MODES.md` | Shared, append-only | Add observed failures with `[observed YYYY-MM-DD]`. Don't delete predicted ones that turned out wrong — mark them resolved. |
 | `README.md` | Shared | Keep the architecture diagram in sync with reality. |
 
 ## Stack
@@ -75,7 +74,6 @@ KV namespace `STRAVA_TOKENS` must exist (see SETUP.md step 3).
 - Wire any Strava write endpoint
 - Generate calendar events directly from the MCP (that's the agent's job)
 - Ship a code change that breaks an existing test
-- Resolve a failure mode without adding an entry to `FAILURE_MODES.md`
 - Change the visibility of any GitHub repo (private ↔ public). Visibility is the user's call; you ask, you don't decide.
 - Disclose secrets or PII because you judged the risk "marginal." The user's standard is theirs to set, not yours.
 
@@ -111,4 +109,4 @@ If any of these feel like friction in the moment, that's the point: the friction
 
 ## When in doubt
 
-Look at the four writeups. If your proposed change isn't consistent with what they say, the change is wrong, the doc is wrong, or you've found something interesting — surface it instead of papering over.
+Look at the three writeups. If your proposed change isn't consistent with what they say, the change is wrong, the doc is wrong, or you've found something interesting — surface it instead of papering over.

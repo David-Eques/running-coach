@@ -1,9 +1,8 @@
-// Route-layer tests for the worker. These exist because we previously had no
-// coverage for the HTTP surface (only analyze.ts was tested), and a real
-// incident — 17k "code had hung" errors over 24h — came from the /mcp route
-// accepting a method it can't actually serve. See FAILURE_MODES.md
-// [observed 2026-05-15]. Without these, the next person who "tidies up" the
-// transport setup brings the loop back.
+// Route-layer tests for the worker's HTTP surface. The /mcp route must reject
+// any method other than POST: a GET with Accept: text/event-stream opens an SSE
+// stream the stateless transport can never serve, which the Worker runtime kills
+// as "code had hung" and the client then reconnects in a loop. These tests pin
+// that behavior so a later "tidy up" of the transport setup can't bring it back.
 
 import { describe, it, expect } from 'vitest'
 import app from './index'

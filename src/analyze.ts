@@ -76,7 +76,7 @@ export function analyzeTrainingLoad(activities: StravaActivity[]): LoadAnalysis 
   // at all — a degenerate case real data never hits (there is always a rest day
   // or a pace difference). The ratio is undefined there; we report the neutral
   // value 1.0 rather than a spurious large number so a deload decision never
-  // hinges on that artifact. Tradeoff logged in FAILURE_MODES.md.
+  // hinges on that artifact.
   const dailyLoads = bucketByDay(recent.filter(a =>
     new Date(a.start_date).getTime() > sevenDaysAgo
   ), now)
@@ -125,7 +125,7 @@ function computeFlags(weekly_loads: number[]): string[] {
   if (weekly_loads.length >= 4 && weekly_loads.slice(0, 3).every(w => w === 0)) {
     flags.push('three_consecutive_weeks_no_training')
   }
-  // hr_drift flags will land when the streams API is wired up (see FAILURE_MODES.md).
+  // hr_drift flags will land when the streams API is wired up.
   // computeFlags will take the activity list back as a parameter at that point.
   return flags
 }
