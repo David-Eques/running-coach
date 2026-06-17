@@ -61,6 +61,14 @@ type StoredTokenBundle = {
   athlete_id?: number
 }
 
+// True only when the caller presents the MCP bearer token, via either the
+// Authorization header or a ?token= query param. Fails closed when the token
+// secret is unset, so a misconfigured Worker rejects rather than accepts.
+function bearerOk(auth: string | undefined, tokenParam: string | undefined, expected: string | undefined): boolean {
+  if (!expected) return false
+  return auth === `Bearer ${expected}` || tokenParam === expected
+}
+
 const app = new Hono<{ Bindings: Env }>()
 
 // ---------------------------------------------------------------------------
@@ -99,8 +107,22 @@ app.get('/oauth/connect', async (c) => {
   if (!c.env.STRAVA_CLIENT_ID) {
     return c.html(renderError('STRAVA_CLIENT_ID secret is not set on this Worker. Run `wrangler secret put STRAVA_CLIENT_ID` and try again.'), 500)
   }
+  // Re-auth guard (single-tenant). Once a Strava token exists, only a caller
+  // holding the MCP bearer may start another authorization. Without this, anyone
+  // who finds this URL could connect their own Strava and overwrite the owner's
+  // token in KV (the single `tokens` record), hijacking the deployment. First-
+  // time setup (no token yet) stays open so deploy → connect is one click.
+  const alreadyConnected = !!(await c.env.STRAVA_TOKENS.get('tokens'))
+  if (alreadyConnected && !bearerOk(c.req.header('authorization'), c.req.query('token'), c.env.MCP_BEARER_TOKEN)) {
+    return c.html(renderError('This Worker is already connected to a Strava account. To re-authorize (e.g. switch accounts), include your MCP bearer token: <code>/oauth/connect?token=YOUR_MCP_BEARER_TOKEN</code>.'), 401)
+  }
+  // Record how this authorization was approved. The callback honors a `reauth`
+  // state unconditionally, but a `setup` state (minted during open first-time
+  // setup) may only write the FIRST token — so a setup state pre-armed before
+  // anyone connects can't be replayed to overwrite the owner's token afterward.
   const state = crypto.randomUUID()
-  await c.env.STRAVA_TOKENS.put(`oauth_state:${state}`, '1', { expirationTtl: 600 })
+  const stateKind = alreadyConnected ? 'reauth' : 'setup'
+  await c.env.STRAVA_TOKENS.put(`oauth_state:${state}`, stateKind, { expirationTtl: 600 })
   const redirectUri = `${originOf(c.req.raw)}/oauth/callback`
   const authorize = new URL('https://www.strava.com/oauth/authorize')
   authorize.searchParams.set('client_id', c.env.STRAVA_CLIENT_ID)
@@ -124,6 +146,13 @@ app.get('/oauth/callback', async (c) => {
   const stateMarker = await c.env.STRAVA_TOKENS.get(`oauth_state:${state}`)
   if (!stateMarker) return c.html(renderError('OAuth state expired or invalid. Start over from the home page.'), 400)
   await c.env.STRAVA_TOKENS.delete(`oauth_state:${state}`)
+  // Re-auth guard, enforced at the write. A `setup` state may only create the
+  // first token; if a token already exists, the authorization must have been
+  // bearer-approved (`reauth`). This blocks a setup state minted during open
+  // first-time setup from being replayed to overwrite the owner's token.
+  if (stateMarker !== 'reauth' && (await c.env.STRAVA_TOKENS.get('tokens'))) {
+    return c.html(renderError('This Worker is already connected. To switch Strava accounts, re-authorize from <code>/oauth/connect</code> with your MCP bearer token.'), 409)
+  }
   if (!scope.includes('activity:read_all')) {
     return c.html(renderError('Required scope <code>activity:read_all</code> was not granted. Re-authorize and tick the box.'), 400)
   }
@@ -163,8 +192,7 @@ async function exchangeStravaCode(env: Env, code: string): Promise<{ ok: true; d
 // ---------------------------------------------------------------------------
 
 app.get('/bootstrap', async (c) => {
-  const auth = c.req.header('authorization')
-  if (auth !== `Bearer ${c.env.MCP_BEARER_TOKEN}`) {
+  if (!bearerOk(c.req.header('authorization'), c.req.query('token'), c.env.MCP_BEARER_TOKEN)) {
     return c.json({ error: 'unauthorized' }, 401)
   }
   const code = c.req.query('code')
@@ -194,12 +222,7 @@ app.get('/bootstrap', async (c) => {
 //                                       reverse-proxy logs, error pages) than
 //                                       headers do. Prefer the header in CLI usage.)
 app.use('/mcp/*', async (c, next) => {
-  const auth = c.req.header('authorization')
-  const tokenParam = c.req.query('token')
-  const expected = c.env.MCP_BEARER_TOKEN
-  const headerOk = auth === `Bearer ${expected}`
-  const queryOk = tokenParam !== undefined && tokenParam === expected
-  if (!headerOk && !queryOk) {
+  if (!bearerOk(c.req.header('authorization'), c.req.query('token'), c.env.MCP_BEARER_TOKEN)) {
     return c.json({ error: 'unauthorized' }, 401)
   }
   await next()
@@ -348,7 +371,7 @@ function renderHome(opts: { origin: string; connected: boolean; athleteId?: numb
     ? `<span class="badge ok">✓ Connected to Strava</span> ${opts.athleteId ? `<small>athlete ${opts.athleteId}</small>` : ''}`
     : `<span class="badge warn">Not connected to Strava yet</span>`
   const action = opts.connected
-    ? `<p>You're set up. <a href="/oauth/connect" class="btn secondary">Re-authorize</a> if you ever switch Strava accounts.</p>`
+    ? `<p>You're set up. To switch Strava accounts, re-authorize with your bearer token: <code>${opts.origin}/oauth/connect?token=YOUR_MCP_BEARER_TOKEN</code></p>`
     : `<p><a href="/oauth/connect" class="btn">Connect Strava</a></p>`
   return layout('running-coach', `
     <h1>running-coach</h1>

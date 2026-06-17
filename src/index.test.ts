@@ -100,3 +100,58 @@ describe('public routes', () => {
     expect(body.strava_connected).toBe(false)
   })
 })
+
+describe('/oauth/connect re-auth guard', () => {
+  // KV that reports an existing Strava token (i.e. the Worker is already connected).
+  const connectedKV = {
+    get: async (key: string) =>
+      key === 'tokens' ? { refresh_token: 'r', access_token: 'a', expires_at: 9_999_999_999 } : null,
+    put: async () => {},
+  } as unknown as KVNamespace
+
+  it('blocks re-authorization without the bearer once connected', async () => {
+    const res = await app.request('/oauth/connect', { method: 'GET' }, { ...env, STRAVA_TOKENS: connectedKV })
+    expect(res.status).toBe(401)
+  })
+
+  it('allows re-authorization with the correct bearer (?token=)', async () => {
+    const res = await app.request('/oauth/connect?token=test_bearer', { method: 'GET' }, { ...env, STRAVA_TOKENS: connectedKV })
+    expect(res.status).toBe(302)
+    expect(res.headers.get('location')).toContain('strava.com/oauth/authorize')
+  })
+
+  it('allows first-time connect with no token yet (no bearer needed)', async () => {
+    const freshKV = { get: async () => null, put: async () => {} } as unknown as KVNamespace
+    const res = await app.request('/oauth/connect', { method: 'GET' }, { ...env, STRAVA_TOKENS: freshKV })
+    expect(res.status).toBe(302)
+  })
+
+  it('blocks a setup-state callback from overwriting an existing token (replay)', async () => {
+    // A `setup` state was minted during open first-time setup; a token now exists.
+    // The callback must refuse to write rather than let the pre-armed state hijack it.
+    const kv = {
+      get: async (key: string) => {
+        if (key.startsWith('oauth_state:')) return 'setup'
+        if (key === 'tokens') return { refresh_token: 'r', access_token: 'a', expires_at: 9_999_999_999 }
+        return null
+      },
+      delete: async () => {},
+      put: async () => {},
+    } as unknown as KVNamespace
+    const res = await app.request(
+      '/oauth/callback?code=x&state=S&scope=activity:read_all',
+      { method: 'GET' },
+      { ...env, STRAVA_TOKENS: kv },
+    )
+    expect(res.status).toBe(409)
+  })
+
+  it('fails closed when MCP_BEARER_TOKEN is unset (no re-auth bypass)', async () => {
+    const res = await app.request(
+      '/oauth/connect',
+      { method: 'GET', headers: { Authorization: 'Bearer ' } },
+      { ...env, MCP_BEARER_TOKEN: '', STRAVA_TOKENS: connectedKV },
+    )
+    expect(res.status).toBe(401)
+  })
+})
