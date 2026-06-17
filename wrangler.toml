@@ -7,7 +7,7 @@ compatibility_flags = ["nodejs_compat"]
 # the Banister TRIMP estimate in src/strava.ts. Keep it in sync with agent/plan.md.
 # Unset / implausible values fall back to 170 (see resolveAthleteLTHR in src/index.ts).
 [vars]
-ATHLETE_LTHR = "169"
+ATHLETE_LTHR = "170"
 
 # KV stores the Strava refresh token so the worker can mint access tokens on demand.
 # The "Deploy to Cloudflare" button auto-creates this namespace and substitutes the
