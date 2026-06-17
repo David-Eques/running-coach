@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# rc — a tiny CLI for poking your running-coach MCP from the terminal.
+#
+# Reads RC_URL (your Worker origin) and RC_TOKEN (your MCP bearer) from the env,
+# calls the MCP `tools/call` method over Streamable HTTP, and pretty-prints the
+# tool's JSON result. No secrets live in this file.
+#
+#   export RC_URL=https://running-coach.<your-subdomain>.workers.dev
+#   export RC_TOKEN=<your MCP_BEARER_TOKEN>
+#   rc analyze_training_load '{"weeks":4}'
+#   rc suggest_next_workout '{"plan_phase":"marathon base, wk5/12","target_workout":"Tempo 5mi @ MP","day_of_week":"Wednesday"}'
+#   rc get_recent_training '{"days":14}'
+#
+# Requires: curl, python3, jq.
+set -euo pipefail
+: "${RC_URL:?set RC_URL to your Worker origin, e.g. https://running-coach.<you>.workers.dev}"
+: "${RC_TOKEN:?set RC_TOKEN to your MCP_BEARER_TOKEN}"
+
+tool="${1:?usage: rc <tool> [json-args]}"
+args="{}"
+[ "$#" -ge 2 ] && args="$2"   # note: ${2:-{}} mis-parses the brace default, so be explicit
+payload="{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"${tool}\",\"arguments\":${args}}}"
+
+# The Worker can return a transient error envelope (e.g. in the brief window
+# where it refreshes the upstream Strava access token). Retry a few times, keep
+# all noise on stderr, and only ever print a clean tool result on stdout.
+for attempt in 1 2 3 4 5; do
+  resp=$(curl -s -m 30 -X POST "$RC_URL/mcp" \
+    -H "Authorization: Bearer $RC_TOKEN" \
+    -H "Content-Type: application/json" \
+    -H "Accept: application/json, text/event-stream" \
+    -d "$payload" || true)
+  if text=$(printf '%s' "$resp" | python3 -c 'import sys, json
+try:
+    d = json.loads(sys.stdin.read(), strict=False)
+    sys.stdout.write(d["result"]["content"][0]["text"])
+except Exception:
+    sys.exit(3)'); then
+    printf '%s\n' "$text" | jq .
+    exit 0
+  fi
+  sleep 1
+done
+
+echo "rc: '$tool' did not return a result after 5 attempts" >&2
+exit 1
