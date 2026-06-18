@@ -132,7 +132,18 @@ Write a summary the human (me) will read. Structure:
 **Escalation:** <only if escalation rules fired>
 ```
 
-Finally, write this same summary to `history/YYYY-MM-DD.md`. Next week's run will read it.
+Finally, persist this week's summary so next Sunday's run can actually read it back:
+
+1. Write the summary to `agent/history/YYYY-MM-DD.md` (this Sunday's date).
+2. Commit just that file and push it to the repo:
+
+```bash
+git add agent/history/YYYY-MM-DD.md
+git commit -m "history: week of YYYY-MM-DD"
+git push
+```
+
+This commit is the only thing that makes the weekly memory persist. The scheduled run works on a fresh checkout each week, so a summary that is written but not committed and pushed is gone when the run ends — and the "read the last 4" step at the top of this prompt then finds nothing. If the push fails (e.g. the scheduled task lacks write access to the repo), say so plainly in the summary so it can be fixed.
 
 ## Things you do not do
 

@@ -129,6 +129,21 @@ weekly-review prompt were separate, the user would have to pick which to
 invoke — and the scheduled task wouldn't know either. Branching in the
 prompt itself keeps the entry point singular.
 
+### v4 (2026-06-17): Persist history, don't just write it
+
+The cross-week memory design — read the last 4 `history/` files — only works if
+each run's summary actually lands in the repo. The prompt told the agent to
+*write* `history/<date>.md` but never to commit and push it. The scheduled task
+runs on a fresh checkout every week, so an uncommitted summary is gone when the
+run ends and the next run reads nothing. Added an explicit `git add` / `commit`
+/ `push` step after writing the file, scoped to just that file, with an
+instruction to surface a failed push in the summary rather than fail silently.
+
+**Lesson:** "write a file" and "persist a file" are different claims in an
+ephemeral-checkout environment. A weekly-memory loop has to close the write half
+explicitly; the read half is free (the run reads its own checkout) but only ever
+sees what a prior run committed.
+
 ## What the prompt produces
 
 Two outputs, both required, in this order:
