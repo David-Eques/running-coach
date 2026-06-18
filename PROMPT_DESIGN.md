@@ -129,20 +129,22 @@ weekly-review prompt were separate, the user would have to pick which to
 invoke — and the scheduled task wouldn't know either. Branching in the
 prompt itself keeps the entry point singular.
 
-### v4 (2026-06-17): Persist history, don't just write it
+### v4 (2026-06-17): Persist history to `main`, not a throwaway branch
 
 The cross-week memory design — read the last 4 `history/` files — only works if
-each run's summary actually lands in the repo. The prompt told the agent to
-*write* `history/<date>.md` but never to commit and push it. The scheduled task
-runs on a fresh checkout every week, so an uncommitted summary is gone when the
-run ends and the next run reads nothing. Added an explicit `git add` / `commit`
-/ `push` step after writing the file, scoped to just that file, with an
-instruction to surface a failed push in the summary rather than fail silently.
+each run's summary lands on `main`, which is what the next run branches from. The
+prompt told the agent to *write* `history/<date>.md`; it never said where to
+commit it. In practice the scheduled routine runs on a fresh per-run branch
+(`claude/...`) that was never merged, so five weeks of real summaries piled up on
+orphan branches while `main` kept only the one manual file — every run branched
+from `main` and saw no history. Added an explicit commit + `git push origin
+HEAD:main` step, scoped to just the history file, with an instruction to surface
+a failed push rather than fail silently.
 
 **Lesson:** "write a file" and "persist a file" are different claims in an
-ephemeral-checkout environment. A weekly-memory loop has to close the write half
-explicitly; the read half is free (the run reads its own checkout) but only ever
-sees what a prior run committed.
+ephemeral, branch-per-run environment. The read half is free (the run reads its
+own checkout); the write half only counts if it reaches the branch the next run
+starts from — here, `main`.
 
 ## What the prompt produces
 
