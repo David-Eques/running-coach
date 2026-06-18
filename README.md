@@ -8,7 +8,9 @@ An AI running coach that lives in your Google Calendar. It reads your Strava, co
 
 ## Demo
 
-▶ **[Watch the 2-minute walkthrough](#)** — the Sunday task reads your week from Strava, decides next week against your plan, and writes the workouts to Google Calendar. <!-- replace (#) with your Loom share URL -->
+![running-coach end to end: the week in Google Calendar, asking the MCP to summarize recent training, then the Sunday routine planning next week and writing it to the calendar](docs/walkthrough.gif)
+
+The week in Google Calendar, asking the MCP *"summarize my last 4 weeks,"* then the Sunday routine running end to end — reading Strava, calling the load-model tools, and writing next week's workouts to Google Calendar. *(Routine run sped up.)*
 
 <details>
 <summary><b>Under the hood</b> — the MCP returns a coach's read, not Strava JSON</summary>
