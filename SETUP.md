@@ -89,6 +89,15 @@ Head to `claude.ai/code/scheduled`. Create a weekly task, Sunday 8pm. Paste the 
 
 Run it manually a few times first. Don't put it on autopilot until you've eyeballed 2-3 outputs and they look right.
 
+### Routine requirements (so the weekly memory persists)
+
+The weekly run reads the last few `agent/history/*.md` summaries to spot multi-week patterns, and writes a new one each Sunday. It runs on a *fresh checkout* every week, so a summary that isn't committed and pushed is gone when the run ends. Two things must hold or the memory silently never accumulates:
+
+1. **The routine needs write/push access to the repo it's connected to.** With read-only access the weekly `git push` fails. The prompt is written to flag a failed push in its summary, so watch for that on the first real run.
+2. **`agent/history/` must be tracked in your repo.** This template gitignores `agent/history/*.md` (so the shared template never carries anyone's training data) — which also stops a fresh fork from adding new history files. In your own copy, delete the `agent/history/*.md` line from `.gitignore` so the weekly commit can track the file.
+
+Those summaries are your training data. If your repo is public and you track history, that data is public — make the repo private if you'd rather it weren't.
+
 ## Troubleshooting
 
 **MCP tools don't appear in Claude Code.** Bearer token mismatch or transport handshake issue. Hit `https://<your-worker>/mcp` directly with curl + the bearer token; you should get a JSON-RPC error about missing method, not a 401 or HTML.

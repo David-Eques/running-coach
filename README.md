@@ -117,7 +117,7 @@ claude mcp add running-coach https://running-coach.<your-subdomain>.workers.dev/
 
 Open Claude Code in any project — `/mcp` shows the running-coach server with three tools. Ask: *"Use running-coach to summarize my last 4 weeks of training."* You should see a summary anchored in the computed numbers.
 
-**Schedule the weekly run.** Go to **https://claude.ai/code/scheduled**, connect this project's repo, create a weekly scheduled task with `agent/prompt.md` as the prompt, Sunday 8 PM your timezone. Add the Google Calendar connector. The agent now runs itself every Sunday and writes next week's workouts to your calendar.
+**Schedule the weekly run.** Go to **https://claude.ai/code/scheduled**, connect this project's repo, create a weekly scheduled task with `agent/prompt.md` as the prompt, Sunday 8 PM your timezone. Add the Google Calendar connector. The agent now runs itself every Sunday and writes next week's workouts to your calendar. For the weekly summaries to persist as cross-week memory, the routine needs write access to your repo and `agent/history/` un-gitignored — see [Routine requirements](./SETUP.md#routine-requirements-so-the-weekly-memory-persists) in SETUP.md.
 
 First-time setup tip: open Claude Code with this repo as workspace and say *"Run a first-time setup — fill in agent/plan.md from these answers:..."* with your race, target, easy pace, max HR, weekly mileage, KOT days, and any injuries. The prompt's first-run branch handles the rest.
 
