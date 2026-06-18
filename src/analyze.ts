@@ -138,6 +138,12 @@ function detectTrend(weekly: number[]): LoadAnalysis['trend'] {
   const last3 = [b, c, d].filter(x => x > 0)
   if (last3.length < 2) return 'declining'
   const slope = (d - b) / 2
+  // When the reference week b is 0 (returning from a layoff — nothing logged
+  // three weeks ago), the relative threshold b * 0.15 collapses to 0 and any
+  // increase would read as "spiking" — the opposite of the gentle reintroduction
+  // a returning athlete needs (cf. the three_consecutive_weeks_no_training flag).
+  // Treat rebuilding from a zero baseline as progressive, not a spike.
+  if (b === 0) return slope > 0 ? 'stable_progressive' : 'stable'
   if (slope > b * 0.15) return 'spiking'
   if (slope < -b * 0.15) return 'declining'
   if (slope > 0) return 'stable_progressive'

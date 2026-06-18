@@ -81,6 +81,21 @@ describe('analyzeTrainingLoad', () => {
     expect(r.flags).toContain('three_consecutive_weeks_no_training')
   })
 
+  it('does not call a returning athlete (zero reference week) "spiking"', () => {
+    // Two empty weeks, then rebuilding over the last two, so the trend's
+    // reference bucket (three weeks ago) is 0. That used to collapse the relative
+    // "spiking" threshold to 0 and flag any progression as a spike.
+    const activities = [
+      mkActivity({ daysAgo: 11, trimp: 40 }),
+      mkActivity({ daysAgo: 8, trimp: 40 }),
+      mkActivity({ daysAgo: 4, trimp: 50 }),
+      mkActivity({ daysAgo: 1, trimp: 50 }),
+    ]
+    const r = analyzeTrainingLoad(activities)
+    expect(r.weekly_loads[1]).toBe(0)           // reference week is empty
+    expect(r.trend).toBe('stable_progressive')  // rebuilding, not spiking
+  })
+
   it('reports data quality based on HR coverage', () => {
     const activities: StravaActivity[] = []
     for (let d = 0; d < 10; d++) {
