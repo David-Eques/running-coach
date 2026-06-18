@@ -112,7 +112,8 @@ export function analyzeTrainingLoad(activities: StravaActivity[]): LoadAnalysis 
 
 function computeFlags(weekly_loads: number[]): string[] {
   const flags: string[] = []
-  // Crude version. Refine with real data. weekly_loads is [oldest, ..., current].
+  // v0.1 flag set; HR-drift / resting-HR flags arrive with the Strava streams API
+  // (see ARCHITECTURE, "What I'd reach for next"). weekly_loads is [oldest, ..., current].
   const lastWeek = weekly_loads[weekly_loads.length - 1]
   const prevWeek = weekly_loads[weekly_loads.length - 2]
   if (prevWeek > 0 && lastWeek < prevWeek * 0.5) {

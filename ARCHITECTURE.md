@@ -56,7 +56,7 @@ Returns a normalized list. Each activity (see `StravaActivity` in `src/strava.ts
 
 Not present: GPS polylines, segment efforts, kudos count. The agent doesn't need them.
 
-### `analyze_training_load(weeks=4)`
+### `analyze_training_load()`
 
 Returns (see `LoadAnalysis` in `src/analyze.ts`):
 
@@ -123,11 +123,11 @@ Designed so a non-technical user can deploy their own copy in three clicks:
 
 1. **"Deploy to Cloudflare" button** in the README forks this repo into the user's GitHub, provisions the Worker + KV namespace + Builds CI from `wrangler.toml`, and prompts for `STRAVA_CLIENT_ID` / `STRAVA_CLIENT_SECRET` / `MCP_BEARER_TOKEN` (described in `.dev.vars.example`). Returns a `https://running-coach.<their-subdomain>.workers.dev` URL.
 2. **Browser OAuth flow on the Worker itself** — `GET /` renders an HTML home page with a *Connect Strava* button, which redirects to Strava's authorize endpoint with `redirect_uri = <worker>/oauth/callback`. The callback exchanges the code, writes the refresh-token bundle to KV, and renders a success page with the exact `claude mcp add` command for that worker URL + bearer token. The legacy `/bootstrap` curl flow stays available for back-compat with single-user installs.
-3. **Claude Code plugin** at `.claude-plugin/marketplace.json` + `.claude-plugin/plugin.json` plus a `skills/weekly-plan/SKILL.md` that wraps `agent/prompt.md`. Installs via `/plugin marketplace add David-Eques/running-coach` → `/plugin install running-coach@running-coach`. MCP wiring (`.mcp.json`) uses `${RUNNING_COACH_URL}` and `${RUNNING_COACH_BEARER}` env-var substitution so the per-user URL/token aren't baked into the plugin manifest.
+3. **Claude Code plugin** at `.claude-plugin/marketplace.json` + `.claude-plugin/plugin.json` plus a `skills/weekly-plan/SKILL.md` that wraps `agent/prompt.md`. Installs via `/plugin marketplace add David-Eques/running-coach` → `/plugin install running-coach@running-coach`. MCP wiring (`.mcp.json`) uses `${RUNNING_COACH_URL}` and `${RUNNING_COACH_BEARER}` env-var substitution so the per-user URL/token aren't baked into the plugin manifest. To use this path, set `RUNNING_COACH_URL=https://running-coach.<subdomain>.workers.dev/mcp` and `RUNNING_COACH_BEARER=<your MCP_BEARER_TOKEN>` in your environment before launching Claude Code — it's an alternative to the README's `claude mcp add`, not an addition.
 
 The remaining friction the user has to do themselves: create a Strava API app (2 min in browser, copy two strings), and update its Authorization Callback Domain to their workers.dev host after deploy. That's the irreducible part.
 
-The user's `agent/plan.md` ships as a *template* full of `<your_*>` placeholders. The agent prompt's first action on each run is to detect those placeholders and, if present, branch into a first-run wizard that collects the 9 athlete-config answers in chat and writes the filled plan.md. After that, the same prompt does the normal weekly review on every subsequent invocation.
+The user's `agent/plan.md` ships as a *template* full of `<your_*>` placeholders. The agent prompt's first action on each run is to detect those placeholders and, if present, branch into a first-run wizard that collects the athlete-config answers in chat and writes the filled plan.md. After that, the same prompt does the normal weekly review on every subsequent invocation.
 
 ## What I deliberately left out of v0
 

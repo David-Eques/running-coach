@@ -2,6 +2,8 @@
 
 An AI running coach that lives in your Google Calendar. It reads your Strava, computes training load **deterministically in versioned code**, and writes next week's workouts as a weekly Claude Code task. Built as a reference implementation for **coaching-shaped MCP tools** — exposing domain primitives (`analyze_training_load`, `suggest_next_workout`) to an LLM agent instead of mirroring a vendor REST API.
 
+[![check](https://github.com/David-Eques/running-coach/actions/workflows/check.yml/badge.svg)](https://github.com/David-Eques/running-coach/actions/workflows/check.yml)
+
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/David-Eques/running-coach)
 
 **Read the design:** [Architecture](./ARCHITECTURE.md) · [Prompt design](./PROMPT_DESIGN.md)
@@ -77,7 +79,7 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for the design thinking and [PROMPT_DES
 
 ## Deploy your own
 
-It's single-tenant by design — one athlete per deployment. You run your own copy. You need: a Strava account, a Cloudflare account (free tier), a Google account, and a Claude account.
+It's single-tenant by design — one athlete per deployment. You run your own copy. You need: a Strava account, a Cloudflare account (free tier), a Google account, and a Claude Pro or Max plan (the weekly scheduled run needs it).
 
 ### 1. Create a Strava API app
 
@@ -92,20 +94,24 @@ Go to **https://www.strava.com/settings/api** and create an application:
 
 Copy the **Client ID** and **Client Secret**.
 
-### 2. Click "Deploy to Cloudflare"
+### 2. Deploy the Worker
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/David-Eques/running-coach)
 
-Cloudflare's UI will:
-- Fork this repo into your GitHub
-- Provision the Worker + KV namespace
-- Prompt you for three secrets (paste the values you copied from Strava, plus invent a random one for `MCP_BEARER_TOKEN` — `openssl rand -hex 32` is a good way)
-- Deploy to `https://running-coach.<your-subdomain>.workers.dev`
+The button forks this repo into your GitHub and deploys the Worker to `https://running-coach.<your-subdomain>.workers.dev`. It does **not** set your secrets — do that yourself once it's deployed, either with Wrangler:
+
+```bash
+wrangler secret put STRAVA_CLIENT_ID       # from your Strava app
+wrangler secret put STRAVA_CLIENT_SECRET   # from your Strava app
+wrangler secret put MCP_BEARER_TOKEN       # invent one: openssl rand -hex 32 — save it, you reuse it in step 3
+```
+
+or in the Cloudflare dashboard under **Worker → Settings → Variables and Secrets**. Prefer the CLI end to end (with explicit control over the KV namespace)? [SETUP.md](./SETUP.md) walks the whole deploy with Wrangler.
 
 Then:
 
-1. **Go back to your Strava app** at https://www.strava.com/settings/api and update **Authorization Callback Domain** to the host of your new Worker URL (e.g. `running-coach.your-subdomain.workers.dev`). Save.
-2. **Visit your Worker URL** in a browser — you'll see a "Connect Strava" button. Click it, authorize, done. The Worker now has your Strava refresh token in KV and can read your activities.
+1. **Go back to your Strava app** at https://www.strava.com/settings/api and set **Authorization Callback Domain** to your Worker's host (e.g. `running-coach.your-subdomain.workers.dev`). Save.
+2. **Visit your Worker URL** in a browser — click **Connect Strava**, authorize, done. The Worker now holds your Strava refresh token in KV and can read your activities.
 
 ### 3. Add the MCP to Claude Code
 
@@ -121,7 +127,7 @@ Open Claude Code in any project — `/mcp` shows the running-coach server with t
 
 **Schedule the weekly run.** Go to **https://claude.ai/code/scheduled**, connect this project's repo, create a weekly scheduled task with `agent/prompt.md` as the prompt, Sunday 8 PM your timezone. Add the Google Calendar connector. The agent now runs itself every Sunday and writes next week's workouts to your calendar. For the weekly summaries to persist as cross-week memory, the routine needs write access to your repo and `agent/history/` un-gitignored — see [Routine requirements](./SETUP.md#routine-requirements-so-the-weekly-memory-persists) in SETUP.md.
 
-First-time setup tip: open Claude Code with this repo as workspace and say *"Run a first-time setup — fill in agent/plan.md from these answers:..."* with your race, target, easy pace, max HR, weekly mileage, KOT days, and any injuries. The prompt's first-run branch handles the rest.
+First-time setup tip: open Claude Code with this repo as workspace and say *"Run a first-time setup — fill in agent/plan.md from these answers:..."* with your race details, paces, max HR, weekly mileage, strength days (the KOT / knees-over-toes program in `agent/kot.md`), and any constraints. The prompt's first-run branch asks for whatever it needs and writes the filled plan.
 
 ## Develop locally
 

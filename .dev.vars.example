@@ -1,11 +1,10 @@
-# Worker secrets — read by `wrangler dev` (when copied to `.dev.vars`) AND by
-# the "Deploy to Cloudflare" button (the deploy UI reads this file to know
-# which secrets to prompt the user for, with the comments shown as hints).
+# Worker secrets, read by `wrangler dev` when copied to `.dev.vars`.
 #
 # To run locally: cp .dev.vars.example .dev.vars and fill in the values, then
 # `npm run dev`.
-# To deploy: the Deploy to Cloudflare button prompts for these at deploy time;
-# or set them manually with `wrangler secret put NAME`.
+# To deploy: set these on the Worker with `wrangler secret put NAME` (or in the
+# Cloudflare dashboard under Worker > Settings > Variables and Secrets). The
+# "Deploy to Cloudflare" button does NOT set them for you.
 
 # Strava API app credentials. Create an app at https://www.strava.com/settings/api
 # and paste the Client ID and Client Secret here. The Authorization Callback Domain

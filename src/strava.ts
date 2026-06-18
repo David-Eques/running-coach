@@ -14,7 +14,7 @@ export type StravaActivity = {
   // Coaching-relevant derivatives, computed here so tools don't have to:
   intensity_factor: number | null // avg_hr / LTHR
   hr_drift_pct: number | null     // null if no HR or too short
-  est_trimp: number               // Banister TRIMP, falls back to RPE-estimated if no HR
+  est_trimp: number               // LTHR-anchored load score (Banister-shaped); RPE-estimated when no HR
   trimp_is_estimated: boolean
   is_long_run: boolean
 }
@@ -117,18 +117,21 @@ export class StravaClient {
 
     const intensity_factor = avg_hr ? +(avg_hr / this.config.athleteLTHR).toFixed(2) : null
 
-    // TRIMP: Banister using HR reserve. Fallback: RPE-estimated by intensity bracket.
+    // Load proxy in the shape of Banister TRIMP. NOTE: true Banister uses heart-rate
+    // reserve — (HR - HRrest) / (HRmax - HRrest), bounded 0..1 — but v0.1 doesn't collect
+    // resting/max HR, so the intensity term here is avg_hr / LTHR. Same monotonic behavior
+    // (harder/longer -> more load); it's an LTHR-ratio heuristic, not literal Banister.
     let est_trimp: number
     let trimp_is_estimated = false
     if (avg_hr && this.config.athleteLTHR) {
-      // Simplified Banister: TRIMP = duration_min × HRr × 0.64 × e^(1.92 × HRr)
-      // Using avg_hr / LTHR as approximation of HR reserve here for simplicity.
-      const hrr = avg_hr / this.config.athleteLTHR
-      est_trimp = Math.round(duration_min * hrr * 0.64 * Math.exp(1.92 * hrr))
+      const hr_ratio = avg_hr / this.config.athleteLTHR
+      est_trimp = Math.round(duration_min * hr_ratio * 0.64 * Math.exp(1.92 * hr_ratio))
     } else {
       trimp_is_estimated = true
-      // RPE bracket from pace; very rough. Better than nothing for missing-strap runs.
-      est_trimp = Math.round(duration_min * 0.7) // assume zone-2-ish
+      // No HR: a rough estimate from duration (assume zone-2-ish). This reads lower than the
+      // HR-based score, so mixed-coverage weeks under-count load — data_quality.coverage_pct
+      // surfaces how much of the window is affected. v0.2: calibrate the fallback to pace zones.
+      est_trimp = Math.round(duration_min * 0.7)
     }
 
     return {
@@ -145,7 +148,7 @@ export class StravaClient {
       hr_drift_pct: null, // requires streams API; v0.2
       est_trimp,
       trimp_is_estimated,
-      is_long_run: distance_km >= 12, // crude — refine per athlete
+      is_long_run: distance_km >= 12, // v0.1: fixed 12km threshold; per-athlete tuning is a v0.2 item
     }
   }
 }

@@ -22,7 +22,7 @@ When wizarding:
    - Injuries / constraints / anything to keep you out of certain workouts
    - Default workout times: run / strength / mobility (e.g. 06:30 / 06:30 / 19:30)
    - Any preference changes from the template defaults (calendar name, notifications, etc.)
-3. From the answers, generate the full `agent/plan.md` (filled-in version of `agent/plan.template.md`) — including phase markers and a week-by-week skeleton scaled to the race date. **Anchor week 1 to where their data actually shows them, not to where they say they normally run.**
+3. From the answers, generate the full `agent/plan.md` (the filled version of the placeholder template that ships as `agent/plan.md`) — including phase markers and a week-by-week skeleton scaled to the race date. **Anchor week 1 to where their data actually shows them, not to where they say they normally run.**
 4. Show the proposed `agent/plan.md` content for confirmation before saving.
 5. Write `agent/plan.md`. Also remind them to set `ATHLETE_LTHR` in `wrangler.toml` (or via `wrangler deploy --var`) to match the `lthr` you computed.
 6. **Stop.** Do not run the weekly review on the same turn — they have no Strava history yet, no `history/` files, and the first real run should happen the following Sunday once they've actually trained against the plan.
@@ -34,13 +34,13 @@ If `agent/plan.md` **does exist and is filled in**, skip the wizard and proceed 
 1. `plan.md` — the canonical training plan AND the athlete's preferences (default times for runs / strength / mobility, mobility delivery mode, default calendar, etc. — see the `## Preferences` block). This is the original prescription. Adjustments live in calendar, not here. If plan.md and calendar disagree, plan.md wins.
 2. `kot.md` — the KOT / ATG strength + mobility menu. Two real strength sessions: `kot_a` Tuesday, `kot_b` Thursday (each ~45–60 min, full-body, includes upper push/pull). **These are strength-only days — no run on Tue or Thu.** Plus `mobility_midweek` (Wed, ~10 min), `mobility_weekend` (Sat or Sun, ~15 min), and an always-optional `mobility_daily` snack pool. See `kot.md` for the full constraint list.
 3. `history/` — your previous weekly summaries. Read the last 4. Patterns across weeks matter more than any single session.
-4. The **running-coach MCP**. Call `analyze_training_load(weeks=4)` BEFORE you reason about adjustments. Always.
+4. The **running-coach MCP**. Call `analyze_training_load()` BEFORE you reason about adjustments. Always.
 
 ## Tool call sequence
 
 In this order:
 
-1. `analyze_training_load(weeks=4)` — get current ACWR, monotony, flags.
+1. `analyze_training_load()` — get current ACWR, monotony, flags (fixed 4-week window).
 2. `get_recent_training(days=7)` — get last week's session-by-session record to compare against what plan.md prescribed.
 3. For each workout in next week's plan: `suggest_next_workout(plan_phase, target_workout, day_of_week)`.
 

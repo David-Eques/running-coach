@@ -141,7 +141,7 @@ app.get('/oauth/callback', async (c) => {
   const state = c.req.query('state')
   const scope = c.req.query('scope') ?? ''
   const error = c.req.query('error')
-  if (error) return c.html(renderError(`Strava returned an error: ${error}`), 400)
+  if (error) return c.html(renderError(`Strava returned an error: ${escapeHtml(error)}`), 400)
   if (!code || !state) return c.html(renderError('Missing code or state parameter on the callback.'), 400)
   const stateMarker = await c.env.STRAVA_TOKENS.get(`oauth_state:${state}`)
   if (!stateMarker) return c.html(renderError('OAuth state expired or invalid. Start over from the home page.'), 400)
@@ -282,12 +282,12 @@ function buildServer(env: Env) {
     'Compute deterministic training load analytics: acute and chronic load (TRIMP), ' +
     'ACWR and status zone, weekly load trend, monotony, strain, and risk flags. ' +
     'Call this FIRST before making any recommendation about next week.',
-    {
-      weeks: z.number().int().min(2).max(12).default(4)
-        .describe('Lookback window in weeks (2-12). 4 is the default per the load model.'),
-    },
-    async ({ weeks }) => {
-      const activities = await strava.getActivities(weeks * 7)
+    {},
+    async () => {
+      // Fixed 4-week model: ACWR is acute-7d over chronic-28d, so the analysis window is
+      // always the last 28 days. (No lookback knob — varying it would distort the chronic
+      // baseline; e.g. a 2-week fetch halves it and roughly doubles ACWR.)
+      const activities = await strava.getActivities(28)
       const analysis = analyzeTrainingLoad(activities)
       return {
         content: [{ type: 'text', text: JSON.stringify(analysis, null, 2) }],

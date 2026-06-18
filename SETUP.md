@@ -7,12 +7,12 @@ End-to-end deploy in under an hour assuming no surprises.
 - A Cloudflare account (free tier is plenty).
 - A Strava account.
 - A Claude Pro or Max plan (for Claude Code cloud scheduled tasks).
-- Node 20+, npm, and `wrangler` (`npm install -g wrangler`).
+- Node 20+ and npm. (`wrangler` is pinned as a dev dependency, so `npm run dev` / `npm run deploy` / `npx wrangler` use the right version — a global install is optional.)
 
 ## 1. Strava API app
 
 1. Go to https://www.strava.com/settings/api.
-2. Create an application. Authorization callback domain: `localhost` for now (we use a one-time auth code flow; no public callback needed).
+2. Create an application. Set **Authorization Callback Domain** to `localhost` for now — you'll change it to your Worker's host in step 6.
 3. Note the **Client ID** and **Client Secret**.
 
 ## 2. Clone and install
@@ -50,30 +50,39 @@ wrangler secret put MCP_BEARER_TOKEN   # paste the one from step 3
 
 ## 5. Deploy
 
+Before deploying, confirm `wrangler.toml` no longer contains `REPLACE_WITH_KV_ID` (you set the real id in step 3) — otherwise every KV read on the deployed Worker will fail.
+
 ```bash
 wrangler deploy
 ```
 
 Note your worker URL, e.g. `https://running-coach.<your-subdomain>.workers.dev`.
 
-## 6. One-time Strava OAuth
+## 6. Connect Strava (browser flow)
 
-Build this URL with your `client_id`:
+1. In your Strava app settings, change **Authorization Callback Domain** to your Worker's host (e.g. `running-coach.<your-subdomain>.workers.dev`) — not `localhost`.
+2. Visit your Worker URL in a browser, click **Connect Strava**, and authorize. You'll land on a success page that prints the exact `claude mcp add` command for the next step.
+
+That's it — your Strava refresh token is now in KV.
+
+<details>
+<summary>Legacy / headless fallback (curl <code>/bootstrap</code>)</summary>
+
+If you can't use a browser, the `/bootstrap` endpoint still works (it's the original flow; `/oauth/connect` above supersedes it). Keep the Strava callback domain as `localhost`, then build this URL with your `client_id`:
 
 ```
 https://www.strava.com/oauth/authorize?client_id=YOUR_ID&response_type=code&redirect_uri=http://localhost&approval_prompt=force&scope=activity:read_all
 ```
 
-Open it. Authorize. You'll be redirected to `http://localhost/?code=<code>&scope=...`. The page won't load — that's fine. **Copy the `code` from the URL.**
-
-Then hit your worker's bootstrap endpoint with that code:
+Open it, authorize, and copy the `code` from the `http://localhost/?code=<code>&...` URL (the page won't load — that's fine). Then:
 
 ```bash
 curl -X GET "https://running-coach.<your-subdomain>.workers.dev/bootstrap?code=THE_CODE" \
   -H "Authorization: Bearer YOUR_MCP_BEARER_TOKEN"
 ```
 
-You should see `{"ok": true, "athlete_id": ...}`. Strava tokens are now in your KV.
+You should see `{"ok": true, "athlete_id": ...}`.
+</details>
 
 ## 7. Wire up Claude Code
 
